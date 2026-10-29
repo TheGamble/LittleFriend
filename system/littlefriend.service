@@ -1,15 +1,22 @@
 [Unit]
 Description=LittleFriend TV Engine
-After=network.target sound.target local-fs.target
+After=network.target sound.target local-fs.target systemd-user-sessions.service
 
 [Service]
 Type=simple
 User=pi
+Group=pi
 WorkingDirectory=/home/pi/LittleFriend
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
 
-# Launch minimal single-app X11 session directly into LittleFriend
+# Bind to physical TTY1 so Xorg treats it as a legitimate local session
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+PAMName=login
+
 ExecStart=/usr/bin/xinit /home/pi/LittleFriend/venv/bin/python /home/pi/LittleFriend/main.py -- :0 -nocursor vt1
 
 Restart=on-failure
