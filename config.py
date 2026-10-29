@@ -24,7 +24,7 @@ STATE_FILE = (
 )
 
 # Hardware Pins (update to match your wiring)
-PIN_POWER_BUTTON = 27
+PIN_POWER_BUTTON = 26
 PIN_ROTARY_CLK = 5
 PIN_ROTARY_DT = 6
 
