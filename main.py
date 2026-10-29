@@ -1,8 +1,15 @@
 # main.py
+import os
 import subprocess
 import sys
 import threading
 import config
+
+# Auto-rotate the physical Waveshare portrait display to landscape on Pi
+if config.IS_PI:
+    # 'right' or 'left' rotates 480x640 portrait into 640x480 landscape
+    os.system("xrandr -o right")
+
 from core.library import Library
 from core.player import VideoPlayer
 from core.state import StateManager
@@ -31,7 +38,6 @@ def on_shutdown():
         subprocess.run(["sudo", "systemctl", "poweroff"])
 
 
-# 1. Initialize core engines
 state = StateManager()
 library = Library()
 player = VideoPlayer()
@@ -40,7 +46,6 @@ ui = TouchUI(player, state, library)
 setup_hardware_callbacks(on_sleep_toggle, on_shutdown, ui.adjust_volume)
 
 
-# 2. Launch web server in a background daemon thread
 def run_web_background():
     try:
         start_web_server(ui, player, state, library)
@@ -51,6 +56,5 @@ def run_web_background():
 web_thread = threading.Thread(target=run_web_background, daemon=True)
 web_thread.start()
 
-# 3. Start playback and run event loop
 ui.start_playback()
 ui.run()

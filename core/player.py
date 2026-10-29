@@ -17,10 +17,19 @@ class VideoPlayer:
             "--no-mouse-events",
             "--no-keyboard-events",
             "--aout=alsa",
+            # Mono Downmix (Combines Center Dialogue + Left/Right into mono)
+            "--audio-filter=mono",
+            "--stereo-mode=mono",
+            # Hardware Acceleration & Performance
+            "--avcodec-hw=any",  # Activates Pi V4L2-M2M hardware H.264 decoder
+            "--avcodec-skiploopfilter=4",  # Skips non-essential deblock frames on heavy files
             "--file-caching=1000",
         ]
         if config.IS_PI:
-            vlc_args += ["--network-caching=500"]
+            vlc_args += [
+                "--network-caching=500",
+                "--codec=v4l2m2m,avcodec",  # Prioritize hardware video decoder
+            ]
 
         instance = vlc.Instance(*vlc_args)
         if instance is None:
@@ -58,6 +67,10 @@ class VideoPlayer:
             start_sec = start_ms / 1000.0
             media.add_option(f":start-time={start_sec}")
 
+        # Enforce mono downmix on the media stream
+        media.add_option(":audio-filter=mono")
+        media.add_option(":stereo-mode=mono")
+
         self.player.set_media(media)
 
         if self._window_id:
@@ -72,7 +85,6 @@ class VideoPlayer:
         self.player.pause()
 
     def toggle_pause(self):
-        """Toggles between play and pause states."""
         if self.is_playing():
             self.pause()
         else:
@@ -111,7 +123,6 @@ class VideoPlayer:
         return self.player.audio_get_volume()
 
     def take_snapshot(self, filepath="/tmp/lf_snap.png"):
-        """Captures frame at native aspect ratio (0, 0 prevents stretching)."""
         try:
             return self.player.video_take_snapshot(0, filepath, 0, 0) == 0
         except Exception:
