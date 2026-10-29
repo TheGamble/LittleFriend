@@ -1,0 +1,19 @@
+[Unit]
+Description=LittleFriend TV Engine
+After=network.target sound.target local-fs.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/LittleFriend
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+
+# Launch minimal single-app X11 session directly into LittleFriend
+ExecStart=/usr/bin/xinit /home/pi/LittleFriend/venv/bin/python /home/pi/LittleFriend/main.py -- :0 -nocursor vt1
+
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target

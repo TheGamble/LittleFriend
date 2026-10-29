@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>LittleFriend Remote</title>
+    <style>
+        :root {
+            --bg: #12141a;
+            --surface: #1e222d;
+            --surface-hover: #2a303f;
+            --primary: #eb8c34;
+            --text: #f0f0f5;
+            --text-dim: #8c91a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .show-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .time-text {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #2d323e;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        button {
+            background: var(--surface-hover);
+            color: var(--text);
+            border: none;
+            padding: 14px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            filter: brightness(1.2);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #12141a;
+        }
+
+        .volume-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary);
+        }
+
+        .library-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .show-select {
+            background: var(--surface);
+            color: var(--text);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--surface-hover);
+            font-size: 1rem;
+        }
+
+        .season-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: var(--surface);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: var(--bg);
+            font-weight: bold;
+        }
+
+        .episode-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .ep-btn {
+            text-align: left;
+            padding: 12px;
+            background: var(--surface);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📺 LittleFriend Remote</h1>
+
+    <!-- Now Playing Card -->
+    <div class="card">
+        <div class="title-row">
+            <div id="show-name" class="show-title">Loading...</div>
+            <div id="time-display" class="time-text">00:00 / 00:00</div>
+        </div>
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <div class="btn-row">
+            <button onclick="sendAction('seek_backward')">« 15s</button>
+            <button id="play-btn" class="btn-primary" onclick="sendAction('toggle')">▶</button>
+            <button onclick="sendAction('seek_forward')">30s »</button>
+            <button onclick="sendAction('skip_intro')">Intro</button>
+        </div>
+        <div class="volume-row">
+            <span>Vol</span>
+            <input type="range" id="vol-slider" min="0" max="100" onchange="sendVolume(this.value)">
+        </div>
+    </div>
+
+    <!-- Library & Episode Browser -->
+    <div class="library-section">
+        <select id="show-dropdown" class="show-select" onchange="onShowChange()"></select>
+        <div id="season-tabs" class="season-tabs"></div>
+        <div id="episode-list" class="episode-list"></div>
+    </div>
+
+    <script>
+        let catalog = {};
+        let currentShow = "";
+        let currentSeason = 1;
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                document.getElementById('show-name').innerText = data.show || "LittleFriend";
+
+                const curSec = Math.floor((data.position_ms || 0) / 1000);
+                const totSec = Math.floor((data.duration_ms || 0) / 1000);
+                document.getElementById('time-display').innerText =
+                    `${fmt(curSec)} / ${fmt(totSec)}`;
+
+                if (totSec > 0) {
+                    const pct = (curSec / totSec) * 100;
+                    document.getElementById('progress-fill').style.width = pct + "%";
+                }
+
+                document.getElementById('play-btn').innerText = data.is_playing ? "❚❚" : "▶";
+            } catch (e) { }
+        }
+
+        function fmt(s) {
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        async function sendAction(action) {
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            fetchStatus();
+        }
+
+        async function sendVolume(value) {
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'volume', value })
+            });
+        }
+
+        async function loadLibrary() {
+            const res = await fetch('/api/library');
+            catalog = await res.json();
+            const dropdown = document.getElementById('show-dropdown');
+            dropdown.innerHTML = "";
+            for (let show in catalog) {
+                const opt = document.createElement('option');
+                opt.value = show;
+                opt.innerText = show;
+                dropdown.appendChild(opt);
+            }
+            if (Object.keys(catalog).length > 0) {
+                currentShow = Object.keys(catalog)[0];
+                renderSeasons();
+            }
+        }
+
+        function onShowChange() {
+            currentShow = document.getElementById('show-dropdown').value;
+            renderSeasons();
+        }
+
+        function renderSeasons() {
+            const tabs = document.getElementById('season-tabs');
+            tabs.innerHTML = "";
+            const seasons = Object.keys(catalog[currentShow] || {});
+            currentSeason = seasons[0] || 1;
+            seasons.forEach(s => {
+                const tab = document.createElement('div');
+                tab.className = `tab ${s == currentSeason ? 'active' : ''}`;
+                tab.innerText = `Season ${s}`;
+                tab.onclick = () => {
+                    currentSeason = s;
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    renderEpisodes();
+                };
+                tabs.appendChild(tab);
+            });
+            renderEpisodes();
+        }
+
+        function renderEpisodes() {
+            const list = document.getElementById('episode-list');
+            list.innerHTML = "";
+            const episodes = (catalog[currentShow] && catalog[currentShow][currentSeason]) || [];
+            episodes.forEach(title => {
+                const btn = document.createElement('button');
+                btn.className = "ep-btn";
+                btn.innerText = title;
+                btn.onclick = async () => {
+                    await fetch('/api/play_episode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ show: currentShow, season: currentSeason, title })
+                    });
+                    fetchStatus();
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        loadLibrary();
+        setInterval(fetchStatus, 1000);
+    </script>
+</body>
+
+</html>
