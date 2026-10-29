@@ -4,12 +4,6 @@ import subprocess
 import sys
 import threading
 import config
-
-# Auto-rotate the physical Waveshare portrait display to landscape on Pi
-if config.IS_PI:
-    # 'right' or 'left' rotates 480x640 portrait into 640x480 landscape
-    os.system("xrandr -o right")
-
 from core.library import Library
 from core.player import VideoPlayer
 from core.state import StateManager

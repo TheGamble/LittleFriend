@@ -17,18 +17,20 @@ class VideoPlayer:
             "--no-mouse-events",
             "--no-keyboard-events",
             "--aout=alsa",
-            # Mono Downmix (Combines Center Dialogue + Left/Right into mono)
+            # Audio Mono Downmix (sums 5.1 Center dialogue cleanly)
             "--audio-filter=mono",
             "--stereo-mode=mono",
-            # Hardware Acceleration & Performance
-            "--avcodec-hw=any",  # Activates Pi V4L2-M2M hardware H.264 decoder
-            "--avcodec-skiploopfilter=4",  # Skips non-essential deblock frames on heavy files
+            # Multi-threaded Hardware Decoding
+            "--avcodec-hw=any",
+            "--avcodec-threads=4",  # Uses all 4 cores of the Pi Zero 2W
+            "--avcodec-skiploopfilter=4",  # Skips loop-filter, saving ~30% CPU
+            "--avcodec-fast",  # Enables fast decoding speedup
             "--file-caching=1000",
         ]
         if config.IS_PI:
             vlc_args += [
                 "--network-caching=500",
-                "--codec=v4l2m2m,avcodec",  # Prioritize hardware video decoder
+                "--codec=v4l2m2m,avcodec",
             ]
 
         instance = vlc.Instance(*vlc_args)

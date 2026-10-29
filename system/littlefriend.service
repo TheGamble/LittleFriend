@@ -1,6 +1,6 @@
 [Unit]
 Description=LittleFriend TV Engine
-After=network.target sound.target local-fs.target systemd-user-sessions.service
+After=network.target sound.target local-fs.target
 
 [Service]
 Type=simple
@@ -10,14 +10,12 @@ WorkingDirectory=/home/pi/LittleFriend
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/pi/.Xauthority
 
-# Bind to physical TTY1 so Xorg treats it as a legitimate local session
-TTYPath=/dev/tty1
-StandardInput=tty
-StandardOutput=journal
-StandardError=journal
-PAMName=login
+# Allow non-root 'pi' user to run the Web companion on Port 80
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 
-ExecStart=/usr/bin/xinit /home/pi/LittleFriend/venv/bin/python /home/pi/LittleFriend/main.py -- :0 -nocursor vt1
+# Run on unallocated Virtual Terminal 2 (bypasses getty@tty1 conflict)
+ExecStart=/usr/bin/xinit /home/pi/LittleFriend/venv/bin/python /home/pi/LittleFriend/main.py -- :0 -nocursor vt2
 
 Restart=on-failure
 RestartSec=3s
