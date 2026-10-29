@@ -5,10 +5,15 @@ import config
 power_button: Any = None
 
 if config.IS_PI:
-    from gpiozero import Button
+    try:
+        from gpiozero import Button
 
-    # hold_time as int (3) satisfies gpiozero type definition
-    power_button = Button(config.PIN_POWER_BUTTON, hold_time=3)
+        # hold_time=3 satisfies the gpiozero integer type signature
+        power_button = Button(config.PIN_POWER_BUTTON, hold_time=3)
+        print(f"[HAL] Button initialized on GPIO {config.PIN_POWER_BUTTON}")
+    except Exception as e:
+        print(f"[HAL Warning] Could not initialize GPIO button: {e}")
+        power_button = None
 else:
     print(
         "[HAL] Running on Desktop: Keyboard controls active (Space=Power/Sleep,"

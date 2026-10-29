@@ -78,8 +78,11 @@ def start_web_server(ui, player, state, library):
             return {"status": "ok"}
         return {"status": "error", "message": "Invalid parameters"}
 
-    print(f"[Web] Server listening on http://localhost:{config.WEB_PORT}")
+    print(f"[Web] Attempting to start server on port {config.WEB_PORT}...")
     try:
         app.run(host="0.0.0.0", port=config.WEB_PORT, quiet=True)
+    except PermissionError:
+        print(f"[Web] Port {config.WEB_PORT} requires root/systemd. Falling back to port 8080...")
+        app.run(host="0.0.0.0", port=8080, quiet=True)
     except Exception as e:
         print(f"[Web Error] Could not start server: {e}")
