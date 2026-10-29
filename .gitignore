@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Project / Test Data
+test_media/
+*.mp4
+*.mkv
+*.avi
+*.json
+!web/static/manifest.json
+
+# Local config & SSL
+.env
+/etc/tinytv/
+*.pem
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
