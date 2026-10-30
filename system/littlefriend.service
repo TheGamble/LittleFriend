@@ -14,7 +14,7 @@ Environment=XAUTHORITY=/home/pi/.Xauthority
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 
-# Run on unallocated Virtual Terminal 2 (bypasses getty@tty1 conflict)
+# Run under Xorg on VT2 (landscape rotation via /etc/X11/xorg.conf.d/99-rotate.conf)
 ExecStart=/usr/bin/xinit /home/pi/LittleFriend/venv/bin/python /home/pi/LittleFriend/main.py -- :0 -nocursor vt2
 
 Restart=on-failure

@@ -6,7 +6,8 @@ import config
 from bottle import Bottle, request, response, static_file
 
 
-def start_web_server(ui, player, state, library):
+def start_web_server(app_state):
+    """Runs the companion web server in a background thread."""
     app: Any = Bottle()
     static_dir = os.path.join(config.BASE_DIR, "web", "static")
 
@@ -23,20 +24,20 @@ def start_web_server(ui, player, state, library):
     @app.route("/api/status")
     def api_status():
         response.content_type = "application/json"
+        player = app_state.player
         return json.dumps({
-            "show": state.data.get("active_show"),
-            "season": ui.browse_season,
-            "is_playing": player.is_playing(),
+            "show": app_state.current_show,
+            "season": app_state.current_season,
+            "is_playing": not player.is_paused(),
             "position_ms": player.get_time(),
-            "duration_ms": player.get_length(),
-            "volume": player.get_volume(),
+            "duration_ms": player.get_duration(),
         })
 
     @app.route("/api/library")
     def api_library():
         response.content_type = "application/json"
         catalog_data = {}
-        for show, seasons in library.catalog.items():
+        for show, seasons in app_state.library.catalog.items():
             catalog_data[show] = {
                 str(season): [ep.title for ep in episodes]
                 for season, episodes in seasons.items()
@@ -48,21 +49,20 @@ def start_web_server(ui, player, state, library):
         req: Any = request
         payload = req.json or {}
         action = payload.get("action")
+        player = app_state.player
+
         if action == "play":
-            player.play()
+            player.resume()
         elif action == "pause":
             player.pause()
         elif action == "toggle":
             player.toggle_pause()
         elif action == "skip_intro":
-            player.seek_relative(config.INTRO_SKIP_SECS)
+            player.seek(config.INTRO_SKIP_SECS)
         elif action == "seek_forward":
-            player.seek_relative(config.SEEK_FORWARD_SECS)
+            player.seek(config.SEEK_FORWARD_SECS)
         elif action == "seek_backward":
-            player.seek_relative(-config.SEEK_BACKWARD_SECS)
-        elif action == "volume":
-            vol = int(payload.get("value", 70))
-            ui.adjust_volume(vol)
+            player.seek(-config.SEEK_BACKWARD_SECS)
         return {"status": "ok"}
 
     @app.route("/api/play_episode", method="POST")
@@ -74,7 +74,7 @@ def start_web_server(ui, player, state, library):
         title = data.get("title")
 
         if show and title:
-            ui.play_show_episode(show, season, title, start_ms=0)
+            app_state.play_specific_episode(show, season, title)
             return {"status": "ok"}
         return {"status": "error", "message": "Invalid parameters"}
 
@@ -82,7 +82,7 @@ def start_web_server(ui, player, state, library):
     try:
         app.run(host="0.0.0.0", port=config.WEB_PORT, quiet=True)
     except PermissionError:
-        print(f"[Web] Port {config.WEB_PORT} requires root/systemd. Falling back to port 8080...")
+        print(f"[Web] Port {config.WEB_PORT} restricted. Falling back to 8080...")
         app.run(host="0.0.0.0", port=8080, quiet=True)
     except Exception as e:
         print(f"[Web Error] Could not start server: {e}")
