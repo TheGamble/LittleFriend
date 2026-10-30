@@ -46,10 +46,11 @@ class LittleFriendApp:
             "--no-osd-bar",
             "--osd-duration=3000",
             "--osd-font-size=28",
-            # Audio Mono Downmix (sums 5.1 Center dialogue into speaker wire)
+            # Audio Mono Downmix
             "--ao=alsa",
             "--audio-channels=mono",
-            # Performance
+            # Disable MPV's desktop mouse shortcuts so touch.py has full control
+            "--input-default-bindings=no",
             "--vo=gpu",
         ]
 
