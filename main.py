@@ -30,13 +30,14 @@ class LittleFriendApp:
 
     def start_mpv_daemon(self):
         """Spawns the MPV process configured for hardware video and socket IPC."""
-        # Remove old socket file if it exists
+        # 1. Clean up old socket
         if os.path.exists(self.player.socket_path):
             try:
                 os.remove(self.player.socket_path)
             except Exception:
                 pass
 
+        # 2. Native MPV command-line arguments
         mpv_cmd = [
             "mpv",
             "--idle=yes",
@@ -45,18 +46,16 @@ class LittleFriendApp:
             "--no-osd-bar",
             "--osd-duration=3000",
             "--osd-font-size=28",
-            # Audio Mono Downmix (5.1 Center dialogue into speaker wire)
-            "--aout=alsa",
+            # Audio Mono Downmix (sums 5.1 Center dialogue into speaker wire)
+            "--ao=alsa",
             "--audio-channels=mono",
-            # Performance & Caching
+            # Performance
             "--vo=gpu",
-            "--file-caching=1500",
         ]
 
         print("[Main] Launching MPV hardware engine...")
-        self.mpv_process = subprocess.Popen(
-            mpv_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        # Inherit stdout/stderr so any MPV messages print directly to the console
+        self.mpv_process = subprocess.Popen(mpv_cmd)
 
         if not self.player.connect(timeout=10.0):
             print("[Main Error] Failed to connect to MPV engine.")

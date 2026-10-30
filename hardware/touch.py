@@ -17,20 +17,36 @@ class TouchController:
         """Finds the Waveshare capacitive touch event device."""
         if not config.IS_PI:
             return None
-        for path in glob.glob("/dev/input/event*"):
+        devices = glob.glob("/dev/input/event*")
+        if not devices:
+            print("[Touch Warning] No /dev/input/event* nodes exist.")
+            return None
+
+        for path in sorted(devices):
             try:
                 dev = InputDevice(path)
-                # Check for absolute coordinate touch capabilities
                 caps = dev.capabilities()
+                # Check for absolute coordinate touch capabilities
                 if ecodes.EV_ABS in caps:
                     abs_caps = caps[ecodes.EV_ABS]
                     if (
-                        ecodes.ABS_X in abs_caps or ecodes.ABS_MT_POSITION_X in abs_caps
+                        ecodes.ABS_X in abs_caps
+                        or ecodes.ABS_MT_POSITION_X in abs_caps
                     ):
-                        print(f"[Touch] Bound to touch device: {dev.name} ({path})")
+                        print(
+                            f"[Touch] Bound to touch device: {dev.name} ({path})"
+                        )
                         return dev
-            except Exception:
-                pass
+                print(
+                    f"[Touch Debug] Skipped {path} ({dev.name}): Not a touch device"
+                )
+            except PermissionError:
+                print(
+                    f"[Touch Permission Error] User 'pi' cannot read {path}. Needs group 'input'."
+                )
+            except Exception as e:
+                print(f"[Touch Debug] {path}: {e}")
+
         print("[Touch Warning] No capacitive touch device found.")
         return None
 

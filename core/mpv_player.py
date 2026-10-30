@@ -49,8 +49,9 @@ class MPVClient:
 
     def load_file(self, filepath: str, start_sec: float | int = 0):
         if start_sec > 0:
+            # MPV 0.38+ syntax: loadfile <file> <flags> <index> <options>
             return self.send(
-                ["loadfile", filepath, "replace", f"start={start_sec}"]
+                ["loadfile", filepath, "replace", 0, f"start={int(start_sec)}"]
             )
         return self.send(["loadfile", filepath, "replace"])
 
